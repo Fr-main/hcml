@@ -29,7 +29,12 @@ npx wrangler deploy
 Worker 上线后，向它发送请求即可：
 
 ```bash
-# 把 HCML 请求体 POST 给 Worker
+# 推荐：POST 到固定 API 路径
+curl -X POST https://your-worker.example.com/convert \
+     -H 'Content-Type: text/plain' \
+     --data-binary @example.hcml
+
+# 兼容写法（旧版仍支持）
 curl -X POST https://your-worker.example.com/ \
      -H 'Content-Type: text/plain' \
      --data-binary @example.hcml
@@ -71,13 +76,22 @@ curl -X POST https://your-worker.example.com/ \
 
 ## API
 
+**推荐走 `/convert`。** 旧客户端 POST `/` 也能被正确转换（不会再被首页吞）。
+
 | 方法 | 路径 | 说明 |
 | --- | --- | --- |
-| `POST` | `/` | body 为 `.hcml` 文本，返回 HTML |
-| `PUT` / `PATCH` | `/` | 同上 |
-| `GET` | `/` | 返回首页与在线转换器（便于本地调试） |
-| 任意 | `/?hcml=...` | 查询参数形式 |
+| `GET` | `/` | 返回首页（含在线转换器 UI） |
+| `GET` | `/health` | 健康检查 |
+| `POST` | `/convert` | body 为 `.hcml` 文本，返回 HTML（⭐ 主 API） |
+| `PUT` / `PATCH` | `/convert` | 同上 |
+| `GET` | `/convert?hcml=...` | 查询参数形式 |
+| 任意 | `/` 带 body | 兼容旧客户端（自动走转换器） |
 | 任意 | `/anything.hcml` | 路径以 `.hcml` 结尾时同样触发转换 |
+
+> **为什么 `/convert`？** 之前首页和转换器共用同一个路径 `/`，首页里的 JS 在线按钮
+> `fetch(location.pathname, {method:"POST", body:...})` 发起 POST 回自己时，Worker
+> 因 `pathname === "/"` 直接返回首页源码，导致用户看到的"转换结果"其实是首页 HTML。
+> 固定到 `/convert` 后，API 永远不会被首页路由误伤。
 
 ## 语言规则
 
