@@ -1,0 +1,15 @@
+{
+  "name": "hcml",
+  "version": "0.1.0",
+  "description": "把 HTML 的所有标签替换成中文标签的语言，在 Cloudflare Workers 上运行",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "node --test"
+  },
+  "devDependencies": {
+    "wrangler": "^3.100.0"
+  }
+}

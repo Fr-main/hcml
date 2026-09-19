@@ -1,0 +1,11 @@
+name = "hcml"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# workers_dev = true
+# 初次部署时请先执行：
+#   npm install && npx wrangler login
+#   npx wrangler deploy
+# 或在 Cloudflare Dashboard 创建 Worker 后把 account_id / name 填入下面：
+
+# account_id = "your-account-id"
