@@ -52,6 +52,26 @@ export default {
       );
     }
 
+    // 1.5 静态模板入口（直接返回一份独立 HTML 文件给用户另存）
+    //     用户访问 https://hcml-api.rewp.de5.net/template.html
+    //     就会拿到完整的"保存即用"示例。
+    const TEMPLATE_PATHS = new Set([
+      "/template.html",
+      "/hcml.html",
+      "/example.html",
+      "/hcml-template.html",
+    ]);
+    if (TEMPLATE_PATHS.has(url.pathname) && method === "GET") {
+      return withCORS(
+        new Response(TEMPLATE_FILE_HTML, {
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        })
+      );
+    }
+
     // 2. 其余所有请求一律走 HCML -> HTML 转换器
     let hcml = url.searchParams.get("hcml") || "";
 
@@ -421,3 +441,4 @@ Content-Type: text/plain
 <p>HCML 项目：<a href="https://github.com/Fr-main/hcml">github.com/Fr-main/hcml</a></p>
 </body>
 </html>`;
+const TEMPLATE_FILE_HTML = "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n<meta charset=\"UTF-8\">\n<title>HCML 加载中…</title>\n<style>\n  html,body{margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,\"PingFang SC\",\"Microsoft YaHei\",sans-serif}\n  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#64748b;flex-direction:column;gap:10px;text-align:center}\n  .hcml-loading .spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:hcml-spin 0.9s linear infinite}\n  @keyframes hcml-spin{to{transform:rotate(360deg)}}\n  .hcml-error{padding:16px 20px;margin:32px auto;max-width:640px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#9f1239;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}\n  .hcml-btn{background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;margin-top:10px}\n  .hcml-btn:hover{background:#1d4ed8}\n</style>\n<!--\n  保存即用：\n  1) 把 <script type=\"application/hcml\"> 里的中文 HTML 改成你自己的。\n  2) 另存为 .html，双击打开。\n  3) 模板页面只会做一件事：把 HCML 代码 POST 到 HCML_API，拿到转换后的 HTML，\n     打开一个空白新窗口 (about:blank 那种感觉) 把它渲染出来。\n     返回的那份 HTML 的 <标题> 会自动成为新窗口的标签页标题。\n-->\n</head>\n<body>\n  <!-- ① HCML 源码区：只改这里 -->\n  <script type=\"application/hcml\">\n<超文本标记语言文档>\n  <头部>\n    <标题>HCML 示例页面</标题>\n  </头部>\n  <主体>\n    <一级标题>欢迎使用 HCML 独立页面</一级标题>\n    <段落>把上面这个 script type=\"application/hcml\" 里的中文 HTML 改成你自己的，浏览器打开时就会自动请求 HCML 服务，然后在新窗口里渲染。</段落>\n    <列表>\n      <列表项>第 1 条</列表项>\n      <列表项>第 2 条</列表项>\n    </列表>\n  </主体>\n</超文本标记语言文档>\n  </script>\n\n  <!-- ② loading 占位（模板页面本身不会被渲染后的 HCML 替换，只管发起请求然后打开新窗口） -->\n  <div class=\"hcml-loading\" id=\"hcml-loading\">\n    <div class=\"spinner\"></div>\n    <div>HCML 转换中，即将在新窗口打开…</div>\n    <div style=\"font-size:12px;color:#94a3b8;max-width:360px\">\n      HCML API: <code style=\"background:#fff;padding:2px 6px;border-radius:4px;color:#2563eb\">https://hcml-api.rewp.de5.net/convert</code>\n    </div>\n    <button type=\"button\" class=\"hcml-btn\" id=\"hcml-open-now\">如果长时间没反应，点我手动打开</button>\n  </div>\n\n  <!-- ③ 渲染脚本：不要改 -->\n  <script>\n    (function(){\n      const HCML_API = \"https://hcml-api.rewp.de5.net/convert\";\n      const srcEl = document.querySelector('script[type=\"application/hcml\"]');\n      const loading = document.getElementById('hcml-loading');\n      let resultUrl = null;\n\n      function showError(msg) {\n        if (loading) loading.outerHTML = '<div class=\"hcml-error\">HCML 请求失败：' + msg + '</div>';\n      }\n\n      async function run() {\n        if (!srcEl) { showError('未找到 &lt;script type=\"application/hcml\"&gt;'); return; }\n        try {\n          const resp = await fetch(HCML_API, {\n            method: 'POST',\n            headers: { 'Content-Type': 'text/plain;charset=utf-8' },\n            body: srcEl.textContent || '',\n          });\n          if (!resp.ok) throw new Error('HTTP ' + resp.status);\n          const html = await resp.text();\n          // 把返回的 <html>…</html> 做成 Blob URL，新窗口打开\n          // 浏览器会把它当作一份\"真正的 HTML 文件\"加载：\n          //   - <title> 自动成为新窗口的标签页标题\n          //   - <script>/<style>/<link> 全部自动生效\n          // 相当于在 about:blank 新窗口里加载了返回的 HTML。\n          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });\n          resultUrl = URL.createObjectURL(blob);\n          const w = window.open(resultUrl, '_blank');\n          if (!w) {\n            // 浏览器拦截了弹窗，提示用户手动点按钮\n            if (loading) {\n              loading.innerHTML = '<div>转换完成，但浏览器拦截了弹窗。请点击下方按钮手动打开：</div>' +\n                '<button type=\"button\" class=\"hcml-btn\" id=\"hcml-open-now2\">打开结果页面</button>';\n              loading.querySelector('#hcml-open-now2').onclick = () => window.open(resultUrl, '_blank');\n            }\n          }\n        } catch (err) {\n          showError(err.message);\n        }\n      }\n\n      // 兜底：那个\"手动打开\"按钮\n      const btn = document.getElementById('hcml-open-now');\n      if (btn) btn.onclick = () => {\n        if (resultUrl) {\n          window.open(resultUrl, '_blank');\n        } else {\n          btn.textContent = '正在请求…';\n          btn.disabled = true;\n          run();\n        }\n      };\n\n      // 自动发起\n      run();\n    })();\n  </script>\n</body>\n</html>";

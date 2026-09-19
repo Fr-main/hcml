@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>HCML 加载中…</title>
+<style>
+  html,body{margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
+  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#64748b;flex-direction:column;gap:10px;text-align:center}
+  .hcml-loading .spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:hcml-spin 0.9s linear infinite}
+  @keyframes hcml-spin{to{transform:rotate(360deg)}}
+  .hcml-error{padding:16px 20px;margin:32px auto;max-width:640px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#9f1239;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+  .hcml-btn{background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;margin-top:10px}
+  .hcml-btn:hover{background:#1d4ed8}
+</style>
+<!--
+  保存即用：
+  1) 把 <script type="application/hcml"> 里的中文 HTML 改成你自己的。
+  2) 另存为 .html，双击打开。
+  3) 模板页面只会做一件事：把 HCML 代码 POST 到 HCML_API，拿到转换后的 HTML，
+     打开一个空白新窗口 (about:blank 那种感觉) 把它渲染出来。
+     返回的那份 HTML 的 <标题> 会自动成为新窗口的标签页标题。
+-->
+</head>
+<body>
+  <!-- ① HCML 源码区：只改这里 -->
+  <script type="application/hcml">
+<超文本标记语言文档>
+  <头部>
+    <标题>HCML 示例页面</标题>
+  </头部>
+  <主体>
+    <一级标题>欢迎使用 HCML 独立页面</一级标题>
+    <段落>把上面这个 script type="application/hcml" 里的中文 HTML 改成你自己的，浏览器打开时就会自动请求 HCML 服务，然后在新窗口里渲染。</段落>
+    <列表>
+      <列表项>第 1 条</列表项>
+      <列表项>第 2 条</列表项>
+    </列表>
+  </主体>
+</超文本标记语言文档>
+  </script>
+
+  <!-- ② loading 占位（模板页面本身不会被渲染后的 HCML 替换，只管发起请求然后打开新窗口） -->
+  <div class="hcml-loading" id="hcml-loading">
+    <div class="spinner"></div>
+    <div>HCML 转换中，即将在新窗口打开…</div>
+    <div style="font-size:12px;color:#94a3b8;max-width:360px">
+      HCML API: <code style="background:#fff;padding:2px 6px;border-radius:4px;color:#2563eb">https://hcml-api.rewp.de5.net/convert</code>
+    </div>
+    <button type="button" class="hcml-btn" id="hcml-open-now">如果长时间没反应，点我手动打开</button>
+  </div>
+
+  <!-- ③ 渲染脚本：不要改 -->
+  <script>
+    (function(){
+      const HCML_API = "https://hcml-api.rewp.de5.net/convert";
+      const srcEl = document.querySelector('script[type="application/hcml"]');
+      const loading = document.getElementById('hcml-loading');
+      let resultUrl = null;
+
+      function showError(msg) {
+        if (loading) loading.outerHTML = '<div class="hcml-error">HCML 请求失败：' + msg + '</div>';
+      }
+
+      async function run() {
+        if (!srcEl) { showError('未找到 &lt;script type="application/hcml"&gt;'); return; }
+        try {
+          const resp = await fetch(HCML_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: srcEl.textContent || '',
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const html = await resp.text();
+          // 把返回的 <html>…</html> 做成 Blob URL，新窗口打开
+          // 浏览器会把它当作一份"真正的 HTML 文件"加载：
+          //   - <title> 自动成为新窗口的标签页标题
+          //   - <script>/<style>/<link> 全部自动生效
+          // 相当于在 about:blank 新窗口里加载了返回的 HTML。
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          resultUrl = URL.createObjectURL(blob);
+          const w = window.open(resultUrl, '_blank');
+          if (!w) {
+            // 浏览器拦截了弹窗，提示用户手动点按钮
+            if (loading) {
+              loading.innerHTML = '<div>转换完成，但浏览器拦截了弹窗。请点击下方按钮手动打开：</div>' +
+                '<button type="button" class="hcml-btn" id="hcml-open-now2">打开结果页面</button>';
+              loading.querySelector('#hcml-open-now2').onclick = () => window.open(resultUrl, '_blank');
+            }
+          }
+        } catch (err) {
+          showError(err.message);
+        }
+      }
+
+      // 兜底：那个"手动打开"按钮
+      const btn = document.getElementById('hcml-open-now');
+      if (btn) btn.onclick = () => {
+        if (resultUrl) {
+          window.open(resultUrl, '_blank');
+        } else {
+          btn.textContent = '正在请求…';
+          btn.disabled = true;
+          run();
+        }
+      };
+
+      // 自动发起
+      run();
+    })();
+  </script>
+</body>
+</html>
