@@ -153,8 +153,20 @@ export function hcmlToHtml(hcml) {
     const en = TAG_MAP[name];
     attrs = attrs || "";
     if (!en) {
-      // 未识别的中文标签：强制写为文本
-      // 保留属性文本（如存在），以便调试
+      // 没在中文映射表里，但它可能是用户混进来的"原生英文标签"
+      // 归一化后看看是不是一个合法的 HTML 标签名
+      const lc = name.toLowerCase();
+      if (/^[a-z][a-z0-9-]*$/.test(lc)) {
+        // 合法的 HTML 标签格式 —— 直接透传
+        // 属性也按 ATTR_MAP 翻译（如果能识别到中文属性名）
+        const translatedAttrs = translateAttrs(attrs, ATTR_MAP);
+        const joined = translatedAttrs ? " " + translatedAttrs.trim() : "";
+        if (VOID_ELEMENTS.has(lc) && !slash) {
+          return `<${lc}${joined}>`;
+        }
+        return `<${slash ? "/" : ""}${lc}${joined}${selfClose && !slash ? " /" : ""}>`;
+      }
+      // 其它未知：视为未识别中文标签，降级为纯文本，避免破坏结构
       const attrHint = attrs && attrs.trim() ? ` ${attrs.trim()}` : "";
       return `&lt;未识别标签:${name}${attrHint}&gt;`;
     }
@@ -166,13 +178,14 @@ export function hcmlToHtml(hcml) {
 
     // 翻译属性名
     const translatedAttrs = translateAttrs(attrs, ATTR_MAP);
+    const joined = translatedAttrs ? " " + translatedAttrs.trim() : "";
 
     // void 元素：自动去掉闭合斜杠（HTML5 允许但无必要）
     if (VOID_ELEMENTS.has(en) && !slash) {
-      return `<${en}${translatedAttrs}>`;
+      return `<${en}${joined}>`;
     }
 
-    return `<${slash ? "/" : ""}${en}${translatedAttrs}${selfClose && !slash ? " /" : ""}>`;
+    return `<${slash ? "/" : ""}${en}${joined}${selfClose && !slash ? " /" : ""}>`;
   });
 
   // 4. 还原原始块（内部文本原样；仅外壳标签名 + 属性名被映射）
@@ -182,9 +195,11 @@ export function hcmlToHtml(hcml) {
   src = src.replace(/\u0000CMT(\d+)\u0000/g, (_m, i) => comments[+i]);
 
   // 6. 若根是 <超文本标记语言文档> 开头但缺 DOCTYPE，补上一个
-  if (/^\s*<(超文本标记语言文档|网页根元素)>/.test(src)) {
+  // 6. 若根是根元素标签开头（允许带属性）且缺 DOCTYPE，补上一个
+  //    支持 `<超文本标记语言文档>` / `<网页根元素>` 等任意已知根元素写法
+  if (/^\s*<(?:超文本标记语言文档|网页根元素|html|HTML)(?=\s|>)/.test(src)) {
     if (!/^\s*<!doctype/i.test(src)) {
-      src = "<!DOCTYPE html>\n" + src;
+      src = "<!DOCTYPE html>\n" + src.replace(/^\s+/, "");
     }
   }
 
