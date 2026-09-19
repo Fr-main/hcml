@@ -175,16 +175,20 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 <title>HCML 加载中…</title>
 <style>
   html,body{margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
-  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#64748b;flex-direction:column;gap:10px}
+  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#64748b;flex-direction:column;gap:10px;text-align:center}
   .hcml-loading .spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:hcml-spin 0.9s linear infinite}
   @keyframes hcml-spin{to{transform:rotate(360deg)}}
   .hcml-error{padding:16px 20px;margin:32px auto;max-width:640px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#9f1239;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+  .hcml-btn{background:#2563eb;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-size:14px;margin-top:10px}
+  .hcml-btn:hover{background:#1d4ed8}
 </style>
 <!--
   保存即用：
   1) 把 <script type="application/hcml"> 里的中文 HTML 改成你自己的。
-  2) 另存为 .html，双击打开——浏览器会自动请求 HCML_API 并渲染。
-  3) 渲染完成后整个页面（包括浏览器标签页标题）会完全变成 HCML 里写的那份。
+  2) 另存为 .html，双击打开。
+  3) 模板页面只会做一件事：把 HCML 代码 POST 到 HCML_API，拿到转换后的 HTML，
+     打开一个空白新窗口 (about:blank 那种感觉) 把它渲染出来。
+     返回的那份 HTML 的 <标题> 会自动成为新窗口的标签页标题。
 -->
 </head>
 <body>
@@ -196,7 +200,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
   </头部>
   <主体>
     <一级标题>欢迎使用 HCML 独立页面</一级标题>
-    <段落>把上面这个 script type="application/hcml" 里的中文 HTML 改成你自己的，浏览器打开时就会自动请求 HCML 服务并渲染。</段落>
+    <段落>把上面这个 script type="application/hcml" 里的中文 HTML 改成你自己的，浏览器打开时就会自动请求 HCML 服务，然后在新窗口里渲染。</段落>
     <列表>
       <列表项>第 1 条</列表项>
       <列表项>第 2 条</列表项>
@@ -205,46 +209,70 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 </超文本标记语言文档>
   </script>
 
-  <!-- ② loading 占位（渲染成功后整页会被替换掉） -->
+  <!-- ② loading 占位（模板页面本身不会被渲染后的 HCML 替换，只管发起请求然后打开新窗口） -->
   <div class="hcml-loading" id="hcml-loading">
     <div class="spinner"></div>
-    <div>HCML 转换中…</div>
+    <div>HCML 转换中，即将在新窗口打开…</div>
+    <button type="button" class="hcml-btn" id="hcml-open-now">如果长时间没反应，点我手动打开</button>
   </div>
 
   <!-- ③ 渲染脚本：不要改 -->
   <script>
-    (async function(){
+    (function(){
       const HCML_API = ${JSON.stringify(HCML_API)};
-      const src = document.querySelector('script[type="application/hcml"]');
-      if (!src) {
-        const load = document.getElementById('hcml-loading');
-        if (load) load.outerHTML = '<div class="hcml-error">未找到 HCML 源码区 &lt;script type="application/hcml"&gt;</div>';
-        return;
+      const srcEl = document.querySelector('script[type="application/hcml"]');
+      const loading = document.getElementById('hcml-loading');
+      let resultUrl = null;
+
+      function showError(msg) {
+        if (loading) loading.outerHTML = '<div class="hcml-error">HCML 请求失败：' + msg + '</div>';
       }
-      try {
-        const resp = await fetch(HCML_API, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: src.textContent || '',
-        });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const html = await resp.text();
-        // ── 关键方案：把返回的 HTML 做成 Blob URL，location.replace 导航过去 ──
-        // 这样做的好处：
-        //  a) 相当于浏览器加载了一份"真正的文件"，内嵌 <script>/<style>/<link>/<title> 全部自动生效，
-        //     不需要像 innerHTML 那样手动挂回去
-        //  b) 和本地 file:// 几乎一样，不管模板是从本地还是某个网页上打开的都能工作
-        //  c) 导航成功后，浏览器标签页标题会自动变成 HCML 里写的 <标题>
-        //  d) 不会留下历史记录（replace），用户点后退就是原入口
-        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        location.replace(url);
-        // 理论上 replace 之后脚本就停了；放个兜底 revoke 也行
-        // setTimeout(() => URL.revokeObjectURL(url), 30000);
-      } catch (err) {
-        const load = document.getElementById('hcml-loading');
-        if (load) load.outerHTML = '<div class="hcml-error">HCML 请求失败：' + err.message + '</div>';
+
+      async function run() {
+        if (!srcEl) { showError('未找到 &lt;script type="application/hcml"&gt;'); return; }
+        try {
+          const resp = await fetch(HCML_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: srcEl.textContent || '',
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const html = await resp.text();
+          // 把返回的 <html>…</html> 做成 Blob URL，新窗口打开
+          // 浏览器会把它当作一份"真正的 HTML 文件"加载：
+          //   - <title> 自动成为新窗口的标签页标题
+          //   - <script>/<style>/<link> 全部自动生效
+          // 相当于在 about:blank 新窗口里加载了返回的 HTML。
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          resultUrl = URL.createObjectURL(blob);
+          const w = window.open(resultUrl, '_blank');
+          if (!w) {
+            // 浏览器拦截了弹窗，提示用户手动点按钮
+            if (loading) {
+              loading.innerHTML = '<div>转换完成，但浏览器拦截了弹窗。请点击下方按钮手动打开：</div>' +
+                '<button type="button" class="hcml-btn" id="hcml-open-now2">打开结果页面</button>';
+              loading.querySelector('#hcml-open-now2').onclick = () => window.open(resultUrl, '_blank');
+            }
+          }
+        } catch (err) {
+          showError(err.message);
+        }
       }
+
+      // 兜底：那个"手动打开"按钮
+      const btn = document.getElementById('hcml-open-now');
+      if (btn) btn.onclick = () => {
+        if (resultUrl) {
+          window.open(resultUrl, '_blank');
+        } else {
+          btn.textContent = '正在请求…';
+          btn.disabled = true;
+          run();
+        }
+      };
+
+      // 自动发起
+      run();
     })();
   </script>
 </body>
