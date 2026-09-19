@@ -332,6 +332,29 @@ const HELLO_PAGE = `<!DOCTYPE html>
 <h1>🀄 HCML Worker</h1>
 <p>把 HCML（中文 HTML 标记语言）转换为标准 HTML 的服务。</p>
 
+<h2>🧭 快速导航</h2>
+<p class="hint" style="margin-bottom:10px">
+  <b>GitHub 仓库：</b>
+  <a href="https://github.com/Fr-main/hcml" target="_blank" rel="noopener">github.com/Fr-main/hcml</a>
+  &nbsp;·&nbsp;
+  <b>文档：</b>
+  <a href="https://github.com/Fr-main/hcml/blob/main/README.md" target="_blank" rel="noopener">README（中文）</a>
+  &nbsp;/&nbsp;
+  <a href="https://github.com/Fr-main/hcml/blob/main/README.en.md" target="_blank" rel="noopener">README（English）</a>
+  &nbsp;·&nbsp;
+  <b>标签映射表：</b>
+  <a href="https://github.com/Fr-main/hcml/blob/main/docs/tags.zh-CN.md" target="_blank" rel="noopener">tags.zh-CN.md</a>
+  &nbsp;/&nbsp;
+  <a href="https://github.com/Fr-main/hcml/blob/main/docs/tags.en.md" target="_blank" rel="noopener">tags.en.md</a>
+</p>
+<div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:18px">
+  <a href="/template.html" target="_blank" rel="noopener">📄 /template.html</a>
+  <a href="/hcml.html"     target="_blank" rel="noopener">📄 /hcml.html</a>
+  <a href="/example.html" target="_blank" rel="noopener">📄 /example.html</a>
+  <a href="/health">🩺 /health</a>
+  <a href="${HCML_API}">🧪 POST /convert</a>
+</div>
+
 <h2>✨ 保存即用的 HTML 模板（推荐从这里开始）</h2>
 <div class="hint">
   <b>用法：</b>复制下面的代码 → 全部粘贴进一个空的 .html 文件 →

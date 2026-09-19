@@ -1,133 +1,144 @@
 # HCML —— 中文 HTML 标记语言
 
-> 把 HTML 的**所有**标签换成中文（一种标签可能有多个中文别名），
-> 部署在 **Cloudflare Workers** 上，向 Worker 发送请求即可把 `.hcml` 翻译成标准 HTML。
+> **[English version](./README.en.md)** · **[标签映射表](./docs/tags.zh-CN.md)**
 
-## 快速上手
+HCML（Chinese HTML Markup Language）把 HTML 的**英文标签**换成了**中文标签**。
+同一个英文标签可以有**多个中文别名**（都表示同一个东西）。
+整个转换器运行在 [Cloudflare Workers](https://workers.cloudflare.com/) 上，
+向 Worker 发送 HCML 文本，它会返回可以直接被浏览器渲染的标准 HTML。
 
-### 1. 安装与登录
+## 在线体验
 
-```bash
-npm install
-npx wrangler login        # 登录 Cloudflare
-```
-
-### 2. 开发调试
-
-```bash
-npx wrangler dev          # 本地运行，默认监听 http://localhost:8787
-```
-
-### 3. 部署到 Cloudflare Workers
-
-编辑 `wrangler.toml`，填入你的 `account_id` 后：
-
-```bash
-npx wrangler deploy
-```
-
-Worker 上线后，向它发送请求即可：
-
-```bash
-# 推荐：POST 到固定 API 路径
-curl -X POST https://your-worker.example.com/convert \
-     -H 'Content-Type: text/plain' \
-     --data-binary @example.hcml
-
-# 兼容写法（旧版仍支持）
-curl -X POST https://your-worker.example.com/ \
-     -H 'Content-Type: text/plain' \
-     --data-binary @example.hcml
-```
-
-返回的就是浏览器可以直接渲染的 HTML，`Content-Type: text/html; charset=utf-8`。
+| 链接 | 说明 |
+| --- | --- |
+| 🌐 **[官方在线转换器](https://hcml-api.rewp.de5.net/)** | 打开后可以直接试写 HCML，点"转换 →"看效果 |
+| 📄 **[保存即用的独立 HTML 模板](https://hcml-api.rewp.de5.net/template.html)** | 浏览器里打开 → 改里面的中文标签 → 保存 → 双击即可在新窗口渲染 |
+| 🧪 `POST /convert` | curl / JS fetch 都能直接调用的主 API |
+| 📖 **[HCML ↔ HTML 标签完整映射表](./docs/tags.zh-CN.md)** | 所有支持的中文标签名 / 中文属性名对照表 |
 
 ## HCML 示例
 
 ```xml
-<文档类型声明>
 <超文本标记语言文档>
   <头部>
-    <标题>HCML 示例</标题>
+    <标题>我的第一个 HCML 页面</标题>
+    <元信息 字符集="UTF-8" />
   </头部>
   <主体>
     <一级标题>欢迎使用 HCML</一级标题>
-    <段落>这是一段中文 <超链接 href="https://example.com">超链接</超链接>。</段落>
-    <图片 src="pic.png" />
-    <粗体>重要</粗体>
+    <段落>这是一段正文，里面有 <超链接 链接地址="https://example.com">一个链接</超链接>。</段落>
+    <列表>
+      <列表项>条目 1</列表项>
+      <列表项>条目 2</列表项>
+    </列表>
   </主体>
 </超文本标记语言文档>
 ```
 
-会被转换为：
+转换成的 HTML（浏览器可以直接打开）：
 
 ```html
 <!DOCTYPE html>
 <html>
-  <head><meta charset="UTF-8"><title>HCML 示例</title></head>
+  <head><meta charset="UTF-8"><title>我的第一个 HCML 页面</title></head>
   <body>
     <h1>欢迎使用 HCML</h1>
-    <p>这是一段中文 <a href="https://example.com">超链接</a>。</p>
-    <img src="pic.png">
-    <b>重要</b>
+    <p>这是一段正文，里面有 <a href="https://example.com">一个链接</a>。</p>
+    <ul>
+      <li>条目 1</li>
+      <li>条目 2</li>
+    </ul>
   </body>
 </html>
 ```
 
-## API
+## 怎么用
 
-**推荐走 `/convert`。** 旧客户端 POST `/` 也能被正确转换（不会再被首页吞）。
+### 1. 调用 API
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| `GET` | `/` | 返回首页（含在线转换器 UI） |
-| `GET` | `/health` | 健康检查 |
-| `POST` | `/convert` | body 为 `.hcml` 文本，返回 HTML（⭐ 主 API） |
-| `PUT` / `PATCH` | `/convert` | 同上 |
-| `GET` | `/convert?hcml=...` | 查询参数形式 |
-| 任意 | `/` 带 body | 兼容旧客户端（自动走转换器） |
-| 任意 | `/anything.hcml` | 路径以 `.hcml` 结尾时同样触发转换 |
+```bash
+# 用 curl 直接转换
+curl -X POST https://hcml-api.rewp.de5.net/convert \
+     -H 'Content-Type: text/plain;charset=utf-8' \
+     --data-binary @example.hcml \
+  > output.html
 
-> **为什么 `/convert`？** 之前首页和转换器共用同一个路径 `/`，首页里的 JS 在线按钮
-> `fetch(location.pathname, {method:"POST", body:...})` 发起 POST 回自己时，Worker
-> 因 `pathname === "/"` 直接返回首页源码，导致用户看到的"转换结果"其实是首页 HTML。
-> 固定到 `/convert` 后，API 永远不会被首页路由误伤。
+# 或在浏览器里用 JS
+const html = await fetch("https://hcml-api.rewp.de5.net/convert", {
+  method: "POST",
+  headers: { "Content-Type": "text/plain;charset=utf-8" },
+  body: "<超文本标记语言文档><主体><段落>你好</段落></主体></超文本标记语言文档>",
+}).then(r => r.text());
+```
+
+返回值 `Content-Type: text/html; charset=utf-8`，浏览器直接就能打开。
+
+### 2. 用保存即用模板（零开发成本）
+
+打开 **[template.html](https://hcml-api.rewp.de5.net/template.html)** → 浏览器菜单里「另存为」→
+在保存下来的 `.html` 文件里修改 `<script type="application/hcml">…</script>` 中的中文标签 →
+**双击**，浏览器会自动请求 HCML API，并在新窗口渲染结果。
+
+### 3. 自己部署
+
+HCML 是一个 Cloudflare Workers 项目：
+
+```bash
+npm install
+npx wrangler login
+
+# 编辑 wrangler.toml 填上你的 account_id
+npx wrangler deploy
+```
 
 ## 语言规则
 
 - **标签名**支持任意 Unicode 字母/数字，中文当然可以。
-- **空元素**（`img` / `br` / `hr` / `input` ...）写成 `<图片 src="x" />` 或 `<图片 src="x">` 都能识别。
+- **空元素**（`img` / `br` / `hr` / `input` ...）写成 `<图片 源="x.png" />` 或 `<图片 源="x.png">` 都能识别。
 - **原始块** `<脚本>` / `<样式>` / `<noscript>` / `<textarea>` 的内部内容**保持原样**，不会被当成标签。
 - **注释** `<!-- ... -->` 会被保留。
-- **未知中文标签**不会破坏 HTML 结构，而是被写成普通文本（例如 `<未识别标签:某某>`）。
+- **未知中文标签**不会破坏 HTML 结构，而是被降级成纯文本（例如 `&lt;未识别标签:某某&gt;`）。
+- **HCML 属性名也支持中文**，见 **[标签映射表](./docs/tags.zh-CN.md)**。
 
-## 映射表
+## 文档导航
 
-详见 [`src/map.js`](./src/map.js)。要增加/调整中文别名，直接在对象里加键值对即可。
+| 文档 | 中文 | 英文 |
+| --- | --- | --- |
+| 项目首页（说明 + 上手） | [README.md](./README.md) | [README.en.md](./README.en.md) |
+| 标签 / 属性完整映射表 | [docs/tags.zh-CN.md](./docs/tags.zh-CN.md) | [docs/tags.en.md](./docs/tags.en.md) |
+| Worker API 路由 | 见本文档「怎么用 · 调用 API」 | [README.en.md](#using-the-api) |
+
+## 映射表在哪里定义？
+
+详见 [`src/map.js`](./src/map.js)。要加中文别名，直接往 `TAG_MAP` 或 `ATTR_MAP` 里加键值对即可。
+标签映射表仓库中的 `docs/tags.*.md` 由 `src/map.js` 自动生成。
 
 ```js
+// src/map.js
 export const TAG_MAP = {
-  // 中文别名: 小写 HTML 标签名
-  "超文本标记语言文档": "html",
-  "网页根元素":        "html",      // 同一个英文标签可以有多个中文别名
+  "超文本标记语言文档": "html",   // 这个中文名 → 标准 <html>
+  "网页根元素":        "html",   // 同一个英文标签可以有多个中文别名
   "头部":              "head",
-  "文档元信息":        "head",
   // ...
 };
 ```
-
-反向查找表 `EN_TO_ZH` 自动生成，用于 HTML → HCML 方向。
 
 ## 目录结构
 
 ```
 hcml/
 ├── src/
-│   ├── index.js       # Worker 入口（fetch handler）
-│   ├── convert.js     # HCML <-> HTML 双向转换器
-│   └── map.js         # 中文 ↔ 英文 标签映射表
+│   ├── index.js       # Cloudflare Workers fetch 入口
+│   ├── convert.js     # HCML ↔ HTML 双向转换器
+│   └── map.js         # 中文 ↔ 英文 标签 / 属性映射表
+├── public/
+│   └── template.html  # "保存即用"的独立 HTML 模板
+├── docs/
+│   ├── tags.zh-CN.md  # 中文标签映射表（中文）
+│   └── tags.en.md     # 中文标签映射表（英文）
 ├── wrangler.toml      # Cloudflare Workers 配置
-└── package.json
+├── package.json
+└── README.md / README.en.md
 ```
 
 ## License
