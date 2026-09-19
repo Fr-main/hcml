@@ -132,24 +132,64 @@ function withCORS(resp) {
 //   页面加载后会自动 POST 到 HCML_API，拿到 HTML 后 document.open/write 渲染。
 const HCML_API = "https://hcml-api.rewp.de5.net/convert";
 
+// 返回的 <html> 模板渲染函数（供独立 HTML 和首页预览按钮复用）
+function applyRemoteHtml(containerDoc, html) {
+  const parser = new (containerDoc.defaultView?.DOMParser || DOMParser)();
+  const tmp = parser.parseFromString(html, "text/html");
+
+  // 1) 合并 head：把 title / meta charset / style / link 等都换成 HCML 里的
+  if (tmp.head) {
+    // 清空当前 head 并把 tmp.head 的子节点逐个移入
+    containerDoc.head.innerHTML = "";
+    while (tmp.head.firstChild) {
+      containerDoc.head.appendChild(tmp.head.firstChild);
+    }
+    // 确保 charset 不丢
+    if (!containerDoc.head.querySelector("meta[charset]")) {
+      const m = containerDoc.createElement("meta");
+      m.setAttribute("charset", "UTF-8");
+      containerDoc.head.prepend(m);
+    }
+  }
+
+  // 2) 覆盖 body 内容
+  if (tmp.body) {
+    containerDoc.body.innerHTML = tmp.body.innerHTML;
+    // 3) innerHTML 不会重新执行内嵌 <script>，主动 eval 一次
+    tmp.body.querySelectorAll("script").forEach(old => {
+      const s = containerDoc.createElement("script");
+      if (old.src) {
+        s.src = old.src;
+      } else {
+        s.textContent = old.textContent;
+      }
+      containerDoc.body.appendChild(s);
+    });
+  }
+}
+
 const TEMPLATE_HTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>我的 HCML 页面</title>
+<title>HCML 加载中…</title>
 <style>
   html,body{margin:0;padding:0;font-family:-apple-system,Segoe UI,Roboto,"PingFang SC","Microsoft YaHei",sans-serif}
-  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#555}
-  .hcml-error{padding:16px 24px;margin:40px auto;max-width:640px;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;color:#856404}
+  .hcml-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fafafa;color:#64748b;flex-direction:column;gap:10px}
+  .hcml-loading .spinner{width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:hcml-spin 0.9s linear infinite}
+  @keyframes hcml-spin{to{transform:rotate(360deg)}}
+  .hcml-error{padding:16px 20px;margin:32px auto;max-width:640px;background:#fff1f2;border:1px solid #fecdd3;border-radius:10px;color:#9f1239;font-family:ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
 </style>
 <!--
   保存即用：
-  1) 把整个 <script type="application/hcml"> 里的内容（就是下面的 HCML）改成你自己写的。
-  2) 另存为 .html，双击打开，浏览器会自动请求 HCML_API 并渲染。
+  1) 把 <script type="application/hcml"> 里的中文 HTML 改成你自己的。
+  2) 另存为 .html，双击打开——浏览器会自动请求 HCML_API 并渲染。
+  3) 渲染成功后，浏览器标签页标题会自动变成 HCML 里写的 <标题>，
+     不是本模板里写死的。
 -->
 </head>
 <body>
-  <!-- HCML 源码区：用户只改这里 -->
+  <!-- ① HCML 源码区：只改这里 -->
   <script type="application/hcml">
 <超文本标记语言文档>
   <头部>
@@ -166,33 +206,45 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 </超文本标记语言文档>
   </script>
 
-  <!-- 占位：HCML 还没渲染前显示 -->
-  <div class="hcml-loading" id="hcml-loading">HCML 转换中…</div>
+  <!-- ② loading 占位（渲染成功后整个 body 会被 HCML 覆盖掉） -->
+  <div class="hcml-loading" id="hcml-loading">
+    <div class="spinner"></div>
+    <div>HCML 转换中…</div>
+  </div>
 
+  <!-- ③ 渲染脚本：不要改 -->
   <script>
-    // 用户页面里自带的渲染脚本，永远不要修改
     (async function(){
       const HCML_API = ${JSON.stringify(HCML_API)};
-      const el = document.querySelector('script[type="application/hcml"]');
-      if (!el) {
-        document.getElementById('hcml-loading').textContent = '未找到 type="application/hcml" 的脚本';
-        return;
-      }
-      const hcml = el.textContent || '';
+      const src = document.querySelector('script[type="application/hcml"]');
+      if (!src) return;
       try {
         const resp = await fetch(HCML_API, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: hcml,
+          body: src.textContent || '',
         });
         const html = await resp.text();
-        // 用 document.open/write 把返回的 <html>…</html> 覆盖整个文档
-        document.open();
-        document.write(html);
-        document.close();
+        // ── 把返回的 <html>…</html> 合并进当前文档 ──────────
+        const tmp = new DOMParser().parseFromString(html, 'text/html');
+        // 1. 整个 <head> 换掉 → <title> 自动变成 HCML 里的 <标题>
+        document.head.innerHTML = '';
+        while (tmp.head.firstChild) document.head.appendChild(tmp.head.firstChild);
+        if (!document.head.querySelector('meta[charset]')) {
+          const m = document.createElement('meta'); m.setAttribute('charset','UTF-8');
+          document.head.prepend(m);
+        }
+        // 2. body 覆盖
+        document.body.innerHTML = tmp.body ? tmp.body.innerHTML : '';
+        // 3. 内嵌 <script> 在 innerHTML 里不会自动执行，重新挂上去
+        (tmp.body ? tmp.body.querySelectorAll('script') : []).forEach(old=>{
+          const s = document.createElement('script');
+          if (old.src) s.src = old.src; else s.textContent = old.textContent;
+          document.body.appendChild(s);
+        });
       } catch (err) {
         const load = document.getElementById('hcml-loading');
-        load && (load.outerHTML = '<div class="hcml-error">HCML 请求失败：' + err.message + '</div>');
+        if (load) load.outerHTML = '<div class="hcml-error">HCML 请求失败：' + err.message + '</div>';
       }
     })();
   </script>
@@ -328,11 +380,13 @@ Content-Type: text/plain
   };
 
   $("open").onclick = () => {
-    const html = $("out").value || "<p>请先点击『转换 →』</p>";
-    const win = window.open();
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+    const html = $("out").value || "<!DOCTYPE html><html><body><p>请先点击『转换 →』</p></body></html>";
+    // 用 Blob URL 打开，完全规避 document.write 的同步限制与 CSP 问题
+    const blob = new Blob([html], {type: "text/html;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    window.open(url);
+    // 2 秒后释放（让新窗口有时间读取）
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
   };
 </script>
 
