@@ -184,8 +184,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
   保存即用：
   1) 把 <script type="application/hcml"> 里的中文 HTML 改成你自己的。
   2) 另存为 .html，双击打开——浏览器会自动请求 HCML_API 并渲染。
-  3) 渲染成功后，浏览器标签页标题会自动变成 HCML 里写的 <标题>，
-     不是本模板里写死的。
+  3) 渲染完成后整个页面（包括浏览器标签页标题）会完全变成 HCML 里写的那份。
 -->
 </head>
 <body>
@@ -206,7 +205,7 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
 </超文本标记语言文档>
   </script>
 
-  <!-- ② loading 占位（渲染成功后整个 body 会被 HCML 覆盖掉） -->
+  <!-- ② loading 占位（渲染成功后整页会被替换掉） -->
   <div class="hcml-loading" id="hcml-loading">
     <div class="spinner"></div>
     <div>HCML 转换中…</div>
@@ -217,31 +216,31 @@ const TEMPLATE_HTML = `<!DOCTYPE html>
     (async function(){
       const HCML_API = ${JSON.stringify(HCML_API)};
       const src = document.querySelector('script[type="application/hcml"]');
-      if (!src) return;
+      if (!src) {
+        const load = document.getElementById('hcml-loading');
+        if (load) load.outerHTML = '<div class="hcml-error">未找到 HCML 源码区 &lt;script type="application/hcml"&gt;</div>';
+        return;
+      }
       try {
         const resp = await fetch(HCML_API, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: src.textContent || '',
         });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const html = await resp.text();
-        // ── 把返回的 <html>…</html> 合并进当前文档 ──────────
-        const tmp = new DOMParser().parseFromString(html, 'text/html');
-        // 1. 整个 <head> 换掉 → <title> 自动变成 HCML 里的 <标题>
-        document.head.innerHTML = '';
-        while (tmp.head.firstChild) document.head.appendChild(tmp.head.firstChild);
-        if (!document.head.querySelector('meta[charset]')) {
-          const m = document.createElement('meta'); m.setAttribute('charset','UTF-8');
-          document.head.prepend(m);
-        }
-        // 2. body 覆盖
-        document.body.innerHTML = tmp.body ? tmp.body.innerHTML : '';
-        // 3. 内嵌 <script> 在 innerHTML 里不会自动执行，重新挂上去
-        (tmp.body ? tmp.body.querySelectorAll('script') : []).forEach(old=>{
-          const s = document.createElement('script');
-          if (old.src) s.src = old.src; else s.textContent = old.textContent;
-          document.body.appendChild(s);
-        });
+        // ── 关键方案：把返回的 HTML 做成 Blob URL，location.replace 导航过去 ──
+        // 这样做的好处：
+        //  a) 相当于浏览器加载了一份"真正的文件"，内嵌 <script>/<style>/<link>/<title> 全部自动生效，
+        //     不需要像 innerHTML 那样手动挂回去
+        //  b) 和本地 file:// 几乎一样，不管模板是从本地还是某个网页上打开的都能工作
+        //  c) 导航成功后，浏览器标签页标题会自动变成 HCML 里写的 <标题>
+        //  d) 不会留下历史记录（replace），用户点后退就是原入口
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        location.replace(url);
+        // 理论上 replace 之后脚本就停了；放个兜底 revoke 也行
+        // setTimeout(() => URL.revokeObjectURL(url), 30000);
       } catch (err) {
         const load = document.getElementById('hcml-loading');
         if (load) load.outerHTML = '<div class="hcml-error">HCML 请求失败：' + err.message + '</div>';
