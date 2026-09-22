@@ -330,18 +330,12 @@ const HELLO_PAGE = `<!DOCTYPE html>
 </head>
 <body>
 <h1 style="display:inline-flex;align-items:center;gap:8px">
-  <svg aria-hidden="true" width="34" height="21" viewBox="0 0 33.634 20.587" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px">
-    <g transform="translate(-195.572,-161.783)" fill="none" stroke="#000000" stroke-miterlimit="10">
-      <path d="M205.979 181.343l-8.994-9.929 9.814-8.89" stroke-width="2"/>
-      <path d="M218.799 162.81l8.994 9.929-9.814 8.89" stroke-width="2"/>
-      <path d="M211.644 181.186l6.997.125" stroke-width="2"/>
-      <path d="M206.165 162.802l6.997.125" stroke-width="2"/>
-      <path d="M203.648 168.092l.037 7.594" stroke-width="1"/>
-      <path d="M203.82 171.126l3.92.034" stroke-width="1"/>
-      <path d="M208.177 168.017l-.034 7.022 3.875.006" stroke-width="1"/>
-      <path d="M208.984 168.501l3.375.068" stroke-width="1"/>
-      <path d="M213.381 175.591l.136-7.211 2.147 2.49 2.113-2.676-.021 7.174" stroke-width="1"/>
-      <path d="M220.112 168.16l-.07 6.681 3.868-.035" stroke-width="1"/>
+  <svg aria-hidden="true" width="28" height="17" viewBox="0 0 28.537 17.228" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px">
+    <g transform="translate(-204.703,-168.007)" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10">
+      <path d="M212.33 184.099l-6.237-9.103 8.997-6.165"/>
+      <path d="M225.594 169.097l6.256 9.129-9.024 6.183"/>
+      <path d="M219.403 179.602l-6.916-1.067"/>
+      <path d="M218.03 172.81l6.916 1.067"/>
     </g>
   </svg>
   HCML Worker
