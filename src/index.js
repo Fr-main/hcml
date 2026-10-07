@@ -3,7 +3,7 @@
 // 路由：
 //   GET  /          首页（带在线转换器 UI）
 //   GET  /health    健康检查
-//   ANY  /convert   ⭐ 主 API：把 HCML 转为 HTML
+//   ANY  /convert   主 API：把 HCML 转为 HTML
 //   ANY  /anything.hcml   扩展名后缀触发转换
 //
 // CORS：
@@ -317,6 +317,7 @@ const HELLO_PAGE = `<!DOCTYPE html>
   h1{font-size:1.5rem;margin-bottom:0.25em}
   a{color:#2563eb}
   .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .ico{width:1.1em;height:1.1em;vertical-align:-0.2em;flex:0 0 auto;stroke:currentColor}
   textarea{font-family:ui-monospace,Menlo,Consolas,monospace}
   .hint{background:#eff6ff;border-left:4px solid #2563eb;padding:10px 14px;border-radius:6px;margin:12px 0;font-size:14px;color:#1e3a8a}
   .code-box{background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px;max-height:360px;overflow:auto;font-size:13px;line-height:1.5}
@@ -330,19 +331,12 @@ const HELLO_PAGE = `<!DOCTYPE html>
 </head>
 <body>
 <h1 style="display:inline-flex;align-items:center;gap:8px">
-  <svg aria-hidden="true" width="28" height="17" viewBox="0 0 28.537 17.228" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px">
-    <g transform="translate(-204.703,-168.007)" fill="none" stroke="#000000" stroke-width="2" stroke-miterlimit="10">
-      <path d="M212.33 184.099l-6.237-9.103 8.997-6.165"/>
-      <path d="M225.594 169.097l6.256 9.129-9.024 6.183"/>
-      <path d="M219.403 179.602l-6.916-1.067"/>
-      <path d="M218.03 172.81l6.916 1.067"/>
-    </g>
-  </svg>
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="32.5" height="32.5" viewBox="0,0,32.5,32.5"><g transform="translate(-188.1575,-127.39151)"><g stroke-miterlimit="10"><path d="M194.63053,159.89151c-3.57496,0 -6.47303,-2.89807 -6.47303,-6.47303v-19.55394c0,-3.57496 2.89807,-6.47303 6.47303,-6.47303h19.55394c3.57496,0 6.47303,2.89807 6.47303,6.47303v19.55394c0,3.57496 -2.89807,6.47303 -6.47303,6.47303z" fill="#000000" stroke="none" stroke-width="0"/><path d="M197.70348,151.20903l-6.11963,-8.98253l8.8277,-6.08341" fill="none" stroke="#ffffff" stroke-width="2"/><path d="M210.71788,136.40557l6.13828,9.00818l-8.85419,6.10117" fill="none" stroke="#ffffff" stroke-width="2"/><path d="M204.64338,146.77155l-6.78586,-1.05288" fill="none" stroke="#ffffff" stroke-width="2"/><path d="M203.29622,140.06944l6.78586,1.05288" fill="none" stroke="#ffffff" stroke-width="2"/></g></g></svg>
   HCML Worker
 </h1>
 <p>把 HCML（中文 HTML 标记语言）转换为标准 HTML 的服务。</p>
 
-<h2>🧭 快速导航</h2>
+<h2><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/></svg> 快速导航</h2>
 <p class="hint" style="margin-bottom:10px">
   <b>GitHub 仓库：</b>
   <a href="https://github.com/Fr-main/hcml" target="_blank" rel="noopener">github.com/Fr-main/hcml</a>
@@ -358,14 +352,14 @@ const HELLO_PAGE = `<!DOCTYPE html>
   <a href="https://github.com/Fr-main/hcml/blob/main/docs/tags.en.md" target="_blank" rel="noopener">tags.en.md</a>
 </p>
 <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:18px">
-  <a href="/template.html" target="_blank" rel="noopener">📄 /template.html</a>
-  <a href="/hcml.html"     target="_blank" rel="noopener">📄 /hcml.html</a>
-  <a href="/example.html" target="_blank" rel="noopener">📄 /example.html</a>
-  <a href="/health">🩺 /health</a>
-  <a href="${HCML_API}">🧪 POST /convert</a>
+  <a href="/template.html" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> /template.html</a>
+  <a href="/hcml.html"     target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> /hcml.html</a>
+  <a href="/example.html" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> /example.html</a>
+  <a href="/health"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 2v2"/><path d="M5 2v2"/><path d="M5 3H4a2 2 0 0 0-2 2v4a6 6 0 0 0 12 0V5a2 2 0 0 0-2-2h-1"/><path d="M8 15a6 6 0 0 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></svg> /health</a>
+  <a href="${HCML_API}"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5c-1.4 0-2.5-1.1-2.5-2.5V2"/><path d="M8.5 2h7"/><path d="M14.5 16h-5"/></svg> POST /convert</a>
 </div>
 
-<h2>✨ 保存即用的 HTML 模板（推荐从这里开始）</h2>
+<h2><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg> 保存即用的 HTML 模板（推荐从这里开始）</h2>
 <div class="hint">
   <b>用法：</b>复制下面的代码 → 全部粘贴进一个空的 .html 文件 →
   把里面 <code>&lt;script type="application/hcml"&gt;…&lt;/script&gt;</code>
@@ -373,8 +367,8 @@ const HELLO_PAGE = `<!DOCTYPE html>
   打开时会自动向 <code>${HCML_API}</code> 发送请求并渲染。
 </div>
 <div class="row" style="margin:6px 0">
-  <button type="button" id="copy-tpl">📋 复制完整 HTML</button>
-  <button type="button" id="dl-tpl" class="ghost">⬇️ 下载为 hcml-template.html</button>
+  <button type="button" id="copy-tpl"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M16 4h2a2 2 0 0 1 2 2v4"/><path d="M21 14H11"/><path d="m15 10-4 4 4 4"/></svg> 复制完整 HTML</button>
+  <button type="button" id="dl-tpl" class="ghost"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg> 下载为 hcml-template.html</button>
   <span id="tpl-stat" style="margin-left:auto;color:#555"></span>
 </div>
 <pre class="code-box" id="tpl-box"></pre>
